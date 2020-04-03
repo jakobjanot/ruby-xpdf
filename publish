@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+#
+# script for uploading a built gem to GemFury
+#
+# will run 1. gem build, 2. upload new gem
+#
+set -e
+
+pushd "$(dirname "$0")" > /dev/null
+
+PROJECT=xpdf
+GEM_VERSION=`cat VERSION`
+
+confirm() {
+  # call with a prompt string or use a default
+  read -r -p "${1:-Are you sure? [y/N]} " response
+  case "$response" in
+    [yY][eE][sS]|[yY])
+      true
+      ;;
+    *)
+      false
+      ;;
+  esac
+}
+
+bold=`tput bold`
+offbold=`tput sgr0`
+
+
+if [  -z "$GEM_FURY_KEY" ]
+then
+  echo "${bold}\$GEM_FURY_KEY is not set! Must exist for you to upload.${offbold}"
+  echo "${dim}Copy your key from https://manage.fury.io/dashboard/karnov/intro?kind=ruby${offbold}"
+  exit 1
+fi
+set -o nounset # to warn if no gem file exists
+
+
+echo -e "\n${bold}remove old versions of package...${offbold}"
+#OLD_VERSIONS=
+if [ -z $(ls -1 $PROJECT*.gem 2>/dev/null) ]
+then
+  echo no reason to remove anything
+else
+  echo "remove these: ??"
+  ls -1 $PROJECT*.gem
+  confirm && rm $PROJECT*.gem || exit 2
+fi
+
+
+
+echo -e "\n${bold}building gem with version $GEM_VERSION${offbold}"
+gem build $PROJECT.gemspec
+
+GEM_FILE=$(ls -1tr *.gem | tail -n 1)
+
+echo
+echo -e "\n${bold}uploading...${offbold}"
+echo
+echo "will upload $GEM_FILE to Gemfury server (https://manage.fury.io/dashboard/karnov)"
+echo
+confirm && curl -F package=@$GEM_FILE https://$GEM_FURY_KEY@push.fury.io/karnov/ || exit 3
+
+echo -e "\n${bold}Done${offbold}"
