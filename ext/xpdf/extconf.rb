@@ -3,6 +3,9 @@
 require 'mkmf'
 require 'pathname'
 
+dir_config('Xm')
+dir_config('freetype2')
+
 root = Pathname.new(__dir__).join('..', '..').expand_path
 version = root.join('VERSION').read
 xpdf_tar_file = root.join("xpdf-#{version}.tar.gz")
